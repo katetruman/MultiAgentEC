@@ -119,7 +119,7 @@ happensAtInferred(viol(C,E,TriggerT,ResidualExp), T) :-
 
 % The expectation that a certain condition E holds when an event C happens is violated
 % if event C takes place but E is not true.
-happensAtInferred(viol(happ(C),E,TriggerT,ResidualExp),T):-
+happensAtInferred(viol(happ(C),E),T):-
     holdsAtCached(exp_rule(happ(C),E), T),
     happensAt(C,T),
     \+ holdsAtCached(exp(happ(C),E,TriggerT,ResidualExp), T).
