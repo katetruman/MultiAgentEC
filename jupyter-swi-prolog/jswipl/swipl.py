@@ -3,6 +3,27 @@ from pyswip import Functor
 from pyswip.prolog import PrologError
 from pathlib import Path
 import re
+import sys
+from io import StringIO
+import contextlib
+
+import logging
+import pygraphviz as pgv
+from graphviz import Digraph
+from IPython.display import Image
+from IPython.display import SVG, display
+def draw(dot):
+    return Image(pgv.AGraph(dot).draw(format='png', prog='dot'))
+
+@contextlib.contextmanager
+def stdoutIO(stdout=None):
+    old = sys.stdout
+    if stdout is None:
+        stdout = StringIO()
+    sys.stdout = stdout
+    yield stdout
+    sys.stdout = old
+
 
 DEFAULT_LIMIT = 25
 
@@ -33,13 +54,13 @@ def format_result(result):
             tmpOutput.append(var + " = " + format_value(res[var]))
         output += ", ".join(tmpOutput) + " ;\n"
     output = output[:-3] + " ."
-
     return output
-
+magic_python_local_vars = {}
 def run(code):
+    global magic_python_local_vars
     prolog = Prolog()
-
     output = []
+    python = False
     ok = True
     tmp = ""
     clauses = []
@@ -50,6 +71,21 @@ def run(code):
     output_files_dir.mkdir(mode=755, exist_ok=True)
     cell_file_name = "cell.pl"
     output_file_name = ""
+    first_line = code.split("\n")[0].strip().upper()
+    if first_line==r"%PYTHON":
+        # Execute each line in turn, ignoring the first (%PYTHON)
+        code = "\n".join(code.split("\n")[1:])
+        with stdoutIO() as s:
+        # Handle errors being thrown out the wazoo
+            try:
+                # Execute this line with the local dictionary context
+                exec(code, None, magic_python_local_vars)
+            except Exception as e:
+                output.append(f"ERROR: Script gave error {e}")
+        line_out = s.getvalue().strip()
+        if len(line_out)>0:
+            output.append(line_out)
+        return output, True
     for line in code.split("\n"):
         line = line.strip()
         match = re.fullmatch(r"%\s*[Ff]ile:\s*(\w+.*)", line)
@@ -68,7 +104,6 @@ def run(code):
             tmp += " " + line
         else:
             clauses.append(line)
-
         if isQuery and tmp[-1] == ".":
             # End of statement
             tmp = tmp[:-1] # Removes "."
@@ -100,9 +135,9 @@ def run(code):
                 output.append("ERROR: {}".format(error))
             tmp = ""
             isQuery = False
+
     if len(clauses) > 0:
         try:
-            #f = open("foo.pl", 'w+')
             f = open(Path(cell_files_dir, cell_file_name), 'w+')
             f.write('\n'.join(clauses))
         finally:
@@ -111,6 +146,10 @@ def run(code):
     if len(output) > 0:
         if output_file_name != "":
             try:
+                dia = Digraph()
+                dia.format='svg'
+                dia.node('T', 'Test')
+                dia.render(filename='dia')
                 qo = open(Path(output_files_dir, output_file_name), 'w+')
                 for o in output:
                     qo.write(o)

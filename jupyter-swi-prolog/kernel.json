@@ -1,0 +1,8 @@
+{
+    "argv": [
+        "jswiplkernel",
+        "-f",
+        "{connection_file}"
+    ],
+    "display_name": "SWI-Prolog"
+}
