@@ -146,10 +146,6 @@ def run(code):
     if len(output) > 0:
         if output_file_name != "":
             try:
-                dia = Digraph()
-                dia.format='svg'
-                dia.node('T', 'Test')
-                dia.render(filename='dia')
                 qo = open(Path(output_files_dir, output_file_name), 'w+')
                 for o in output:
                     qo.write(o)
