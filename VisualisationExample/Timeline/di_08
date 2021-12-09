@@ -1,0 +1,13 @@
+digraph {
+	graph [label="Time: 8"]
+	13 [label=" testRequested(123, HIV, Otago Blood, AH)=NA"]
+	10 [label=" histRequested(123, Well)=ANS"]
+	14 [label=" resultMessaged(13, positive, Otago Blood)"]
+	11 [label=" diagnosed(123, HIV, positive, PS)"]
+	12 [label=" messaged(10, happensAt(diagnosis(123, Hep-C, Positive), 1), Well)"]
+	15 [label=" linkedEvidence(11, 14, PS)"]
+	14 -> 13
+	12 -> 10
+	11 -> 15
+	15 -> 14
+}
