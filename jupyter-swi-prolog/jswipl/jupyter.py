@@ -1,5 +1,5 @@
 from . import swipl
-
+import os
 def main():
     from ipykernel.kernelapp import IPKernelApp
     IPKernelApp.launch_instance(kernel_class=SwiplKernel)
@@ -15,7 +15,8 @@ class SwiplKernel(Kernel):
     language_info = {'name': 'swipl',
                      'mimetype': 'text/plain'}
     banner = "SWI-Prolog Kernel"
-
+    
+    os.system('rm /work/consulted_cells/*')
     def do_execute(self, code, silent,
                    store_history=True,
                    user_expressions=None,
