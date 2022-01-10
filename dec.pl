@@ -2,32 +2,41 @@
 :- multifile initiates/3.
 :- multifile terminates/3.
 :- multifile releases/3.
+:- multifile progress/3.
 :- multifile happensAtNarrative/2.
+:- multifile holdsAt/2.
+:- multifile derived_fluent/1.
 :- dynamic holdsAtCached/2.
 :- dynamic releasedAtCached/2.
 :- dynamic cached/2.
 :- dynamic happensAtNarrative/2.
 :- dynamic label/2.
+:- dynamic derived_fluent/1.
+
 :- discontiguous initially/1.
 :- discontiguous initiates/3.
 :- discontiguous terminates/3.
 :- discontiguous releases/3.
 :- discontiguous happensAtNarrative/2.
+:- discontiguous derived_fluent/1.
+
+
 
 :- table(stratum/2).
 stratum(1, cum_prop_delta(_,_,_)).
 stratum(2, cum_prop(_,_,_)).
 stratum(3, F) :-
     setof(Func/Arity,
-	  (Fluent,E,T,B)^(( clause(initially(Fluent), B)
-	                  ; clause(initiates(E, Fluent, T), B)
-	                  ; clause(terminates(E, Fluent, T), B)
-	                  ),
-		          functor(Fluent, Func, Arity),
-		          \+ memberchk(Func/Arity, [cum_prop_delta/3, cum_prop/3, exp/4, exp/2])
-	                 ),
-	  FAList),
-    % writeln(FAList),
+          (Fluent,E,T,B)^(( clause(initially(Fluent), B)
+                          ; clause(initiates(E, Fluent, T), B)
+                          ; clause(terminates(E, Fluent, T), B)
+                          ),
+                          functor(Fluent, Func, Arity),
+                          \+ memberchk(Func/Arity, [cum_prop_delta/3, cum_prop/3, exp/4, exp/2])
+                         ),
+          FAList1),
+    findall(FuncArity, derived_fluent(FuncArity), FAList2),
+    union(FAList1, FAList2, FAList),
     member(Func/Arity, FAList),
     functor(F, Func, Arity). % Create template for F with new vars as arguments
 stratum(4, exp(_,_,_,_)).
@@ -58,7 +67,7 @@ holdsAtNoCache(exp(C,E,TriggerT,ProgressedExp), T) :-
     ( pragmatically_keep_exp(ResidualExp, SimplifiedExp)
     ; \+ member(SimplifiedExp, [true, false])
     ),
-    progress(SimplifiedExp, ProgressedExp).
+    progress(SimplifiedExp, ProgressedExp,T).
 
 holdsAtNoCache(F, -1) :-
     F = exp_rule(_,_),
@@ -119,15 +128,15 @@ happensAtInferred(viol(C,E,TriggerT,ResidualExp), T) :-
 
 % The expectation that a certain condition E holds when an event C happens is violated
 % if event C takes place but E is not true.
-happensAtInferred(viol(happ(C),E),T):-
-    holdsAtCached(exp_rule(happ(C),E), T),
-    happensAt(C,T),
-    \+ holdsAtCached(exp(happ(C),E,TriggerT,ResidualExp), T).
+%happensAtInferred(viol(happ(C),E),T):-
+%    holdsAtCached(exp_rule(happ(C),E), T),
+%    happensAt(C,T),
+%    \+ holdsAtCached(exp(happ(C),E,_,_), T).
 
 
 
 happensAtInferred(conflict(P),T):-
-	holdsAt(exp(eventually(P)),T), holdsAt(exp(never(P)),T).
+    holdsAt(exp(eventually(P)),T), holdsAt(exp(never(P)),T).
 
 % Expectations and cumulative property fluents are always released from inertia
 releasedAt(exp(_), _).
@@ -141,31 +150,43 @@ releasedAt(F, T2) :-
     T1 is T2 - 1,
     releasedAtCached(F, T1),
     \+ (happensAt(E, T1),
-	( initiates(E, F, T1)
-	 ; terminates(E, F, T1))).
+    ( initiates(E, F, T1)
+     ; terminates(E, F, T1))).
 releasedAt(F, T2) :-
     T1 is T2 - 1,
     happensAt(E, T1),
     releases(E, F, T1),
     assert(releasedAtCached(F, T2)). % Use a cached version?
 
-% Support for multi-valued fluent, taken from Marek Sergot's lecture notes
+% Support for multi-valued fluent, taken from Marek Sergot-s lecture notes
 terminates(E, F=_, T) :- initiates(E, F=_, T).
-F:- F=_.
+%F:- F=_.
 
 holdsAtPrevLabel(F, L, T) :-
     eval('@prev'(L,F), T, true).
 
 % TO DO: Add support below for 'or' and for additional temporal operators
 
+
+eval(ExistsExpr, T, Boolean):-
+    ExistsExpr = exist(_, _),
+    !,
+    varnumbers_names(ExistsExpr, exist(_,ExprCopy),_),
+    eval(ExprCopy, T, Boolean).
+
+
 eval(F, T, Boolean) :-
     functor(F, Func, Arity),
-    \+ member(Func/Arity, [true/0, false/0, not/1, and/1, (@)/1, happ/1, next/1, before/2, eventually/1, always/1, never/1, until/2, '@prev'/2]),
+    \+ member(Func/Arity, [true/0, false/0, not/1, and/1, condition/1, (@)/1, happ/1, next/1, within/2, within/3, later/2, delay/2, before/2, preceded/2, eventually/1, always/1, never/1, until/2, '@prev'/2]),
     ( setof(F, holdsAtCached(F, T), GroundFs) ->
-	    Boolean = true,
+        Boolean = true,
         member(F, GroundFs)
     ; Boolean = false
     ).
+
+% Evaluate true / false condition
+eval(condition(X),_,Bool):- (X -> Bool = true ; Bool = false).
+
 eval(true, _, true).
 eval(false, _, false).
 eval(not(F), T, NotResult) :-
@@ -174,11 +195,18 @@ eval(not(F), T, NotResult) :-
 eval(and(L), T, Result) :-
     map_eval(L, T, EvalResults),
     reduce_and(EvalResults, [], Result).
+%eval(@(L), T, Boolean) :-
+%    ( label(L, T) ->
+%        Boolean = true
+%    ; Boolean = false
+%    ).
 eval(@(L), T, Boolean) :-
-    ( label(L, T) ->
-        Boolean = true
+    ( setof(L, label(L, T), Ls) ->
+        Boolean = true,
+        member(L, Ls)
     ; Boolean = false
     ).
+
 eval('@prev'(L,F), T, Boolean) :-
     findall(PrevT, (label(L,PrevT), PrevT < T), PrevLTs),
     ( (sort(0, @>, PrevLTs, DescPrevLTs),
@@ -188,11 +216,45 @@ eval('@prev'(L,F), T, Boolean) :-
     ; Boolean = false
     ).
 eval(happ(Event), T, Boolean) :-
-    ( happensAt(Event,T) ->
-        Boolean = true
+    ( setof(Event, happensAt(Event,T), Es) ->
+        Boolean = true,
+     member(Event, Es)
     ; Boolean = false
     ).
+
+
 eval(next(F), _, next(F)).
+
+eval(preceded(F,P),T,F2):- S is T - P, (S < 0 -> false ; (holdsAt(F,S)-> F2 = true ; F2 = false)).
+
+eval(within(F,P),T,F2):-
+    (eval(F,T,true) ->
+        F2 = true
+    ; P < 0 -> F2 = false;
+    F2 = within(F,P)).
+
+eval(within(F,P,Type),T,F2):-
+    (eval(F,T,true) ->
+        F2 = true
+    ; P < 0 -> F2 = false;
+    F2 = within(F,P,Type)).
+
+eval(later(F,P),T,F2):-
+    (eval(F,T,true) ->
+        F2 = false
+    ; P < 0 -> F2 = true;
+    F2 = later(F,P)).
+
+eval(delay(F,P),T,F2):-
+    (eval(F,T,true) ->
+    (P = 0 ->
+    F2 = true;
+    F2 = false);
+    (P = 0 ->
+    F2 = false;
+    F2 = delay(F,P))).
+
+
 eval(eventually(F), T, F2) :-
     ( eval(F, T, true) ->
         F2 = true
@@ -219,6 +281,9 @@ eval(before(F1,F2), T, F):-
      eval(F1,T, true) -> F = true;
      F = before(F1,F2)).
 
+
+
+
 map_eval([], _, []).
 map_eval([H|T], Time, [HResult|TResult]) :-
     eval(H, Time, HResult),
@@ -238,12 +303,17 @@ reduce_and([Term|Tail], Unknowns, Result) :-
 
 % Progression (note: partial evaluation/simplication has already been done)
 
-progress(true, true).
-progress(false, false).
-progress(next(LTLFormula), LTLFormula).
-progress(before(F1,TE), before(F1,TE)).
-progress(eventually(LTLFormula), eventually(LTLFormula)).
-progress(never(LTLFormula), never(LTLFormula)).
+progress(true, true,_).
+progress(false, false,_).
+progress(next(LTLFormula), LTLFormula,_).
+
+progress(within(F1,T1), within(F1,T2),_):- T2 is T1 - 1.
+
+progress(later(F1,T1), later(F1,T2),_):- T2 is T1 - 1.
+progress(delay(F1,T1), delay(F1,T2),_):- T2 is T1 - 1.
+progress(before(F1,F2), before(F1,F2),_).
+progress(eventually(LTLFormula), eventually(LTLFormula),_).
+progress(never(LTLFormula), never(LTLFormula),_).
 
 possibly_unknown_not(F, not(F)) :-
     \+ member(F, [true,false]).
@@ -262,16 +332,18 @@ tick(T) :-
     % retractall(releasedAtCached(_, Tm2)),
     num_strata(NS),
     forall((between(1,NS,N)
-	    %, format("** Stratum ~w**~n", [N])
-	   ),
+        %, format("** Stratum ~w**~n", [N])
+       ),
             ( forall((stratum(N,F), % format("* Fluent ~w~n", [F]),
-		      holdsAt(F,T)),
+              holdsAt(F,T)),
                      %(write('Caching '), write(F), write(' at '), writeln(T),
-		     assert(holdsAtCached(F,T))
-		     %)
-		    ),
+             (holdsAtCached(F,T) -> true ;
+             assert(holdsAtCached(F,T))
+             )
+             %)
+            ),
              % format("Asserting cached(~w,~w)~n", [N,T]),
-	     assert(cached(N,T))
+         assert(cached(N,T))
            )).
     % forall(happensAt(F,T), ( write(happensAt(F,T)), nl, assert(happensAtCached(F,T)) ))
     % findall(FOrV, (fulf(T, FOrV) ; viol(T,  FOrV)), FsAndVs),
