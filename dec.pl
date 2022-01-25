@@ -20,8 +20,6 @@
 :- discontiguous happensAtNarrative/2.
 :- discontiguous derived_fluent/1.
 
-
-
 :- table(stratum/2).
 stratum(1, cum_prop_delta(_,_,_)).
 stratum(2, cum_prop(_,_,_)).
@@ -32,18 +30,20 @@ stratum(3, F) :-
                           ; clause(terminates(E, Fluent, T), B)
                           ),
                           functor(Fluent, Func, Arity),
-                          \+ memberchk(Func/Arity, [cum_prop_delta/3, cum_prop/3, exp/4, exp/2])
+                          \+ memberchk(Func/Arity, [cum_prop_delta/3, cum_prop/3, exp/6, exp/4])
                          ),
           FAList1),
     findall(FuncArity, derived_fluent(FuncArity), FAList2),
     union(FAList1, FAList2, FAList),
     member(Func/Arity, FAList),
     functor(F, Func, Arity). % Create template for F with new vars as arguments
-stratum(4, exp(_,_,_,_)).
-stratum(5, exp(_)).
+stratum(4, exp(_,_,_,_,_,_)).
+stratum(5, exp(_,_,_)).
+
 % If adding more strata, update num_strata/1 below.
 
 num_strata(5).
+
 
 holdsAt(F,T) :-
     stratum(N,F),
@@ -55,22 +55,28 @@ holdsAt(F,T) :-
     \+ cached(N,T),
     holdsAtNoCache(F,T).
 
-holdsAtNoCache(exp(E), T) :-
-    setof(Exp, exists(Cond,OrigExp,TriggerT)^holdsAtCached(exp(Cond,OrigExp,TriggerT,Exp), T), Exps),
-    member(E, Exps).
+% Expectations now contain a status and a message. If Status is set to independent, this means that the expectation 
+% will be retained even if the triggering expectation rule is terminated. If the Status is entered as dependent (or another undefined entry),
+% the expectation will be terminated with the expectation rule.
 
-holdsAtNoCache(exp(C,E,TriggerT,ProgressedExp), T) :-
+holdsAtNoCache(exp(E,Status, Message), T) :-
+    setof((Exp,S, M), exists(Cond,OrigExp,TriggerT)^holdsAtCached(exp(Cond,OrigExp,TriggerT,Exp,S, M), T), Exps),
+    member((E,Status, M), Exps),
+    (holdsAt(exp_rule(_,E,Status,Message),T) ; Status = independent).
+
+holdsAtNoCache(exp(C,E,TriggerT,ProgressedExp, Status, Message), T) :-
     T > 0,
     PrevT is T-1,
-    holdsAtCached(exp(C,E,TriggerT,ResidualExp), PrevT),
+    holdsAtCached(exp(C,E,TriggerT,ResidualExp, Status, Message), PrevT),
     eval(ResidualExp, PrevT, SimplifiedExp),
     ( pragmatically_keep_exp(ResidualExp, SimplifiedExp)
     ; \+ member(SimplifiedExp, [true, false])
     ),
-    progress(SimplifiedExp, ProgressedExp,T).
+    progress(SimplifiedExp, ProgressedExp,T),
+    (holdsAt(exp_rule(C,E,Status,Message),T) ; Status = independent).
 
 holdsAtNoCache(F, -1) :-
-    F = exp_rule(_,_),
+    F = exp_rule(_,_,_,_),
     initially(F).
 
 holdsAtNoCache(F, 0) :-
@@ -98,12 +104,12 @@ holdsAtNoCache(cum_prop(P,K,V), T) :-
 
 % If an exp_rule holds in state T, and its condition is true there, then
 % its expectation holds in state T.  Use T=-1 if rule holds initially
-holdsAtNoCache(exp(C,E,T,E), T) :-
-    T >= 0, % Special case: It's OK to check T=-1 for exp_rule/2 facts.
-    holdsAtCached(exp_rule(C,E), T), % NOTE: Same T
+holdsAtNoCache(exp(C,E,T,E,Status,Message), T) :-
+    T >= 0, % Special case: It's OK to check T=-1 for exp_rule/4 facts.
+    holdsAtCached(exp_rule(C,E, Status, Message), T), % NOTE: Same T
     eval(C, T, true),
     PrevT is T-1,
-    \+ holdsAtCached(exp(C,E,_,E), PrevT). % Avoid proliferation of 'always' and 'never' exps from same rule triggering in multiple time steps.
+    \+ holdsAtCached(exp(C,E,_,E, Status, Message), PrevT). % Avoid proliferation of 'always' and 'never' exps from same rule triggering in multiple time steps.
 
 % pragmatically_keep_exp/2
 % Pragmatic choices for carryng forward expectations that are violated or fulfilled
@@ -118,29 +124,21 @@ happensAt(F,T) :- happensAtNarrative(F,T) ; happensAtInferred(F,T).
 % TO DO: replace with fulf and viol closure clauses - but I've forgotten what I meant by that!
 % Note: changed from having 1 timestep delay for fulf/viol to no delay
 
-happensAtInferred(fulf(C,E,TriggerT, ResidualExp), T) :-
-    holdsAtCached(exp(C,E,TriggerT,ResidualExp), T),
+happensAtInferred(fulf(C,E,TriggerT, ResidualExp, Status, Message), T) :-
+    holdsAtCached(exp(C,E,TriggerT,ResidualExp, Status, Message), T),
     eval(ResidualExp, T, true).
 
-happensAtInferred(viol(C,E,TriggerT,ResidualExp), T) :-
-    holdsAtCached(exp(C,E,TriggerT,ResidualExp), T),
+happensAtInferred(viol(C,E,TriggerT,ResidualExp, Status, Message), T) :-
+    holdsAtCached(exp(C,E,TriggerT,ResidualExp, Status, Message), T),
     eval(ResidualExp, T, false).
-
-% The expectation that a certain condition E holds when an event C happens is violated
-% if event C takes place but E is not true.
-%happensAtInferred(viol(happ(C),E),T):-
-%    holdsAtCached(exp_rule(happ(C),E), T),
-%    happensAt(C,T),
-%    \+ holdsAtCached(exp(happ(C),E,_,_), T).
-
 
 
 happensAtInferred(conflict(P),T):-
-    holdsAt(exp(eventually(P)),T), holdsAt(exp(never(P)),T).
+    holdsAt(exp(eventually(P),Status, Message),T), holdsAt(exp(never(P), Status, Message),T).
 
 % Expectations and cumulative property fluents are always released from inertia
-releasedAt(exp(_), _).
-releasedAt(exp(_,_,_,_), _).
+releasedAt(exp(_,_,_), _).
+releasedAt(exp(_,_,_,_,_,_), _).
 releasedAt(cum_prop(_,_,_), _).
 releasedAt(cum_prop_delta(_,_,_), _).
 
@@ -152,6 +150,7 @@ releasedAt(F, T2) :-
     \+ (happensAt(E, T1),
     ( initiates(E, F, T1)
      ; terminates(E, F, T1))).
+     
 releasedAt(F, T2) :-
     T1 is T2 - 1,
     happensAt(E, T1),
@@ -177,12 +176,13 @@ eval(ExistsExpr, T, Boolean):-
 
 eval(F, T, Boolean) :-
     functor(F, Func, Arity),
-    \+ member(Func/Arity, [true/0, false/0, not/1, and/1, condition/1, (@)/1, happ/1, next/1, within/2, within/3, later/2, delay/2, before/2, preceded/2, eventually/1, always/1, never/1, until/2, '@prev'/2]),
+    \+ member(Func/Arity, [true/0, false/0, not/1, and/1, or/1, condition/1, (@)/1, happ/1, next/1, within/2, within/3, later/2, delay/2, before/2, preceded/2, eventually/1, always/1, never/1, until/2, '@prev'/2]),
     ( setof(F, holdsAtCached(F, T), GroundFs) ->
         Boolean = true,
         member(F, GroundFs)
     ; Boolean = false
     ).
+
 
 % Evaluate true / false condition
 eval(condition(X),_,Bool):- (X -> Bool = true ; Bool = false).
@@ -195,11 +195,11 @@ eval(not(F), T, NotResult) :-
 eval(and(L), T, Result) :-
     map_eval(L, T, EvalResults),
     reduce_and(EvalResults, [], Result).
-%eval(@(L), T, Boolean) :-
-%    ( label(L, T) ->
-%        Boolean = true
-%    ; Boolean = false
-%    ).
+
+eval(or(L), T, Result):-
+    map_eval(L, T, EvalResults),
+    reduce_or(EvalResults, [], Result).
+
 eval(@(L), T, Boolean) :-
     ( setof(L, label(L, T), Ls) ->
         Boolean = true,
@@ -301,6 +301,16 @@ reduce_and([Term|Tail], Unknowns, Result) :-
     append(Unknowns, [Term], Unknowns2),
     reduce_and(Tail, Unknowns2, Result).
 
+reduce_or([],[],false):- !.
+reduce_or([], Unknowns, or(Unknowns)).
+reduce_or([false|Tail], Unknowns, Result):-
+    !,
+    reduce_or(Tail, Unknowns, Result).
+reduce_or([true|_], _, true):- !.
+reduce_or([Term|Tail], Unknowns, Result):-
+    append(Unknowns, [Term], Unknowns2),
+    reduce_or(Tail, Unknowns2, Result).
+
 % Progression (note: partial evaluation/simplication has already been done)
 
 progress(true, true,_).
@@ -345,9 +355,6 @@ tick(T) :-
              % format("Asserting cached(~w,~w)~n", [N,T]),
          assert(cached(N,T))
            )).
-    % forall(happensAt(F,T), ( write(happensAt(F,T)), nl, assert(happensAtCached(F,T)) ))
-    % findall(FOrV, (fulf(T, FOrV) ; viol(T,  FOrV)), FsAndVs),
-    % forall(member(FOrV, FsAndVs), ( write(happensAt(FOrV,T)), assert(happensAtCached(FOrV,T)) )).
 
 initialiseDEC :-
     retractall(holdsAtCached(_,_)),
