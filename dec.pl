@@ -39,7 +39,6 @@ stratum(3, F) :-
     functor(F, Func, Arity). % Create template for F with new vars as arguments
 stratum(4, exp(_,_,_,_,_,_)).
 stratum(5, exp(_,_,_)).
-
 % If adding more strata, update num_strata/1 below.
 
 num_strata(5).
@@ -61,7 +60,7 @@ holdsAt(F,T) :-
 
 holdsAtNoCache(exp(E,Status, Message), T) :-
     setof((Exp,S, M), exists(Cond,OrigExp,TriggerT)^holdsAtCached(exp(Cond,OrigExp,TriggerT,Exp,S, M), T), Exps),
-    member((E,Status, M), Exps),
+    member((E,Status, Message), Exps),
     (holdsAt(exp_rule(_,E,Status,Message),T) ; Status = independent).
 
 holdsAtNoCache(exp(C,E,TriggerT,ProgressedExp, Status, Message), T) :-
