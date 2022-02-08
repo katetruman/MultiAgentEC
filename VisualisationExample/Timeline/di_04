@@ -1,7 +1,7 @@
 digraph {
 	graph [label="Time: 4"]
-	13 [label=" testRequested(123, HIV, Otago Blood, AH)=NA"]
 	10 [label=" histRequested(123, Well)=NA"]
+	13 [label=" testRequested(123, HIV, Otago Blood, AH)=NA"]
 	14 [label=" resultMessaged(13, positive, Otago Blood)"]
 	14 -> 13
 }

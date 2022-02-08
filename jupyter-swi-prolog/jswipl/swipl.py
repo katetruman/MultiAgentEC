@@ -56,8 +56,10 @@ def format_result(result):
     output = output[:-3] + " ."
     return output
 magic_python_local_vars = {}
+magic_python_global_vars={}
 def run(code):
     global magic_python_local_vars
+    global magic_python_global_vars
     prolog = Prolog()
     output = []
     python = False
@@ -79,7 +81,7 @@ def run(code):
         # Handle errors being thrown out the wazoo
             try:
                 # Execute this line with the local dictionary context
-                exec(code, None, magic_python_local_vars)
+                exec(code, magic_python_global_vars, magic_python_local_vars)
             except Exception as e:
                 output.append(f"ERROR: Script gave error {e}")
         line_out = s.getvalue().strip()
