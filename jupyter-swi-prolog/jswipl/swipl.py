@@ -64,17 +64,17 @@ def run(code):
     output = []
     python = False
     ok = True
-    tmp = ""
-    clauses = []
-    isQuery = False
+    tmp = ""  # Temporary string to house working
+    clauses = [] # A list of clauses from this cell, ignoring queries and comments
+    isQuery = False # Boolean to check if a line is a query
     cell_files_dir = Path(Path.cwd(), "consulted_cells")
     output_files_dir = Path(Path.cwd(), "output_files")
     cell_files_dir.mkdir(mode=755, exist_ok=True)
     output_files_dir.mkdir(mode=755, exist_ok=True)
-    cell_file_name = "cell.pl"
+    cell_file_name = "cell.pl" # The default consultation cell name, used if no %file is used
     output_file_name = ""
     first_line = code.split("\n")[0].strip().upper()
-    if first_line==r"%PYTHON":
+    if re.match(r"%\s*PYTHON.*", first_line) is not None:
         # Execute each line in turn, ignoring the first (%PYTHON)
         code = "\n".join(code.split("\n")[1:])
         with stdoutIO() as s:
@@ -93,24 +93,31 @@ def run(code):
         match = re.fullmatch(r"%\s*[Ff]ile:\s*(\w+.*)", line)
         outputMatch = re.fullmatch(r"%\s*[Oo]utput:\s*(\w+.*)", line)
         if match is not None:
+            # Get the specified name, the first group, after the %file:
             cell_file_name = match.group(1)
+            # If the name does NOT end with .pl, make it end so
             if not cell_file_name.endswith(".pl"):
-                cell_file_name += ".pl"
+                cell_file_name += ".pl" 
         if outputMatch is not None:
             output_file_name = outputMatch.group(1)
+        # If the line is empty or a comment, do nothing
         if line == "" or line[0] == "%":
             continue
+        # If line is a query, do that instead but don't save it
         if line[:2] == "?-":
             isQuery = True
             line = line[2:]
             tmp += " " + line
+        # Line is a clause, save it
         else:
             clauses.append(line)
+        # If line a query, and that query is actually executed
         if isQuery and tmp[-1] == ".":
             # End of statement
             tmp = tmp[:-1] # Removes "."
             maxresults = DEFAULT_LIMIT
-            # Checks for maxresults
+            # If ending in a }, check if there is no matching {
+            # Then check if prolog spat an error to tell us the limit is bad
             if tmp[-1] == "}":
                 tmp = tmp[:-1] # Removes "}"
                 limitStart = tmp.rfind('{')
@@ -125,7 +132,7 @@ def run(code):
                         ok = False
                         output.append("ERROR: Invalid limit {" + limit + "}!")
                     tmp = tmp[:limitStart]
-
+            # Actually try the query
             try:
                 if isQuery:
                     result = prolog.query(tmp, maxresult=maxresults)
@@ -137,7 +144,7 @@ def run(code):
                 output.append("ERROR: {}".format(error))
             tmp = ""
             isQuery = False
-
+    # If there are some clauses to look at
     if len(clauses) > 0:
         try:
             f = open(Path(cell_files_dir, cell_file_name), 'w+')
@@ -145,7 +152,9 @@ def run(code):
         finally:
             f.close()
             prolog.consult(f.name)
+    # If there is some output
     if len(output) > 0:
+        # If we wish to save output to a file
         if output_file_name != "":
             try:
                 qo = open(Path(output_files_dir, output_file_name), 'w+')
