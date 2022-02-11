@@ -147,11 +147,16 @@ def run(code):
     # If there are some clauses to look at
     if len(clauses) > 0:
         try:
-            f = open(Path(cell_files_dir, cell_file_name), 'w+')
-            f.write('\n'.join(clauses))
+            c = open(Path(cell_files_dir, cell_file_name), 'w+')
+            o = open(Path(output_files_dir, "allCells.pl"), 'a+')
+            c.write('\n'.join(clauses))
+            #o.write('\n'.join(clauses) + "\n")
+            o.write("%s File: %s\n%s\n\n" % (r"%",cell_file_name, '\n'.join(clauses)))
+
         finally:
-            f.close()
-            prolog.consult(f.name)
+            c.close()
+            o.close()
+            prolog.consult(c.name)
     # If there is some output
     if len(output) > 0:
         # If we wish to save output to a file

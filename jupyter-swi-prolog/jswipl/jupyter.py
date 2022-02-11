@@ -17,6 +17,7 @@ class SwiplKernel(Kernel):
     banner = "SWI-Prolog Kernel"
     
     os.system('rm /work/consulted_cells/*')
+    os.system('rm /work/output_files/*')
     def do_execute(self, code, silent,
                    store_history=True,
                    user_expressions=None,
