@@ -150,7 +150,6 @@ def run(code):
             c = open(Path(cell_files_dir, cell_file_name), 'w+')
             o = open(Path(output_files_dir, "allCells.pl"), 'a+')
             c.write('\n'.join(clauses))
-            #o.write('\n'.join(clauses) + "\n")
             o.write("%s File: %s\n%s\n\n" % (r"%",cell_file_name, '\n'.join(clauses)))
 
         finally:
