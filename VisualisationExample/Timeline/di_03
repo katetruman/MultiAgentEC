@@ -1,5 +1,0 @@
-digraph {
-	graph [label="Time: 3"]
-	10 [label=" histRequested(123, Well)=NA"]
-	13 [label=" testRequested(123, HIV, Otago Blood, AH)=NA"]
-}
