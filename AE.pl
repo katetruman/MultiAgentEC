@@ -14,10 +14,9 @@ causes(Hospital:send(Recipient, Message), Recipient:receive(Hospital, Message), 
 % File: waitList.pl
 initiates(monSys:receive(Hospital, waitAddReq(ID, Organs, Details)), waiting(ID,Hospital,Details,T),T):-
 \+ happensAt(monSys, viol(happ(receive(Hospital, waitAddReq(ID, Organs, Details))),_,_,_),T).
-causes(monSys:fulf(happ(receive(Hospital, waitAddReq(ID, _, _))), _, _, _, _, _),
-monSys:send(Hospital, waitAccept(ID)), _).
-causes(monSys:viol(happ(receive(Hospital, waitAddReq(ID, _, _))), _, _, _, _, Reason),
-monSys:send(Hospital, waitReject(ID, Reason)), _).
+causes(monSys:receive(Hospital, waitAddReq(ID, Organs, Details)), monSys:send(Hospital, waitAccept(ID)), T):-
+\+ happensAt(monSys, viol(happ(receive(Hospital, waitAddReq(ID, Organs, Details))),_,_,_),T).
+causes(monSys:viol(happ(receive(Hospital, waitAddReq(ID, _, _))), _, _, _, _, Reason), monSys:send(Hospital, waitReject(ID, Reason)), _).
 
 % File: waitListDeletions.pl
 terminates(monSys:receive(Hospital, waitDelReq(ID,_)), waiting(ID,Hospital,_,_),_).

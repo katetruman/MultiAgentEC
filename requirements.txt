@@ -1,0 +1,7 @@
+-e jupyter-swi-prolog
+pygraphviz
+graphviz
+GraphvizAnim
+ipywidgets==7.6.5
+mogrify
+moviepy

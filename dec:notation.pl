@@ -89,10 +89,6 @@ holdsAtNoCache(Actor, exp(C,E,TriggerT,ProgressedExp, Status, Message), T) :-
     (holdsAt(Actor, exp_rule(C,E,Status,Message),T) ; Status = independent).
 
 
-%holdsAtNoCache(Actor, F, -1) :-
-%    F = exp_rule(_,_,_,_),
-%    initially(Actor:F).
-
 holdsAtNoCache(Actor, F, 0) :-
     initially(Actor:F).
 
@@ -135,7 +131,6 @@ pragmatically_keep_exp(always(_), false).
 pragmatically_keep_exp(never(_), true).
 
 happensAt(Actor, F,T) :- happensAtInferred(Actor, F,T); happensAtNarrative(Actor:F,T).
-%happensAt(Actor, F,T) :- F \= establishment, (happensAtInferred(Actor, F,T); happensAtNarrative(Actor:F,T)), (holdsAt(Actor, established, T) ; happensAt(Actor, establishment, T)). 
 
 % TO DO: replace with fulf and viol closure clauses - but I have forgotten what I meant by that!
 % Note: changed from having 1 timestep delay for fulf/viol to no delay
