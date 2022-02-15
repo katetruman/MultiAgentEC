@@ -1,9 +1,10 @@
-% Added arg to all multifile, dynamic declarations except derived fluent, progress
+% This version of dec.pl uses Agent:Event notation
+
 :- multifile initially/1.
 :- multifile initiates/3.
 :- multifile terminates/3.
 :- multifile releases/4.
-:- multifile progress/3.
+:- multifile progress/2.
 :- multifile happensAtNarrative/2.
 :- multifile holdsAt/3.
 :- multifile derived_fluent/1.
@@ -14,12 +15,6 @@
 :- dynamic label/3.
 :- dynamic derived_fluent/1.
 
-% Asserting rules
-:- dynamic happensAt/3.
-:- dynamic holdsAt/3.
-:- multifile holdsAtNoCache/3.
-:- dynamic holdsAtNoCache/3.
-
 
 :- discontiguous initially/1.
 :- discontiguous initiates/3.
@@ -27,11 +22,6 @@
 :- discontiguous releases/4.
 :- discontiguous happensAtNarrative/2.
 :- discontiguous derived_fluent/1.
-
-% Hmmm, did not used to need happensAt here
-:- multifile happensAt/3.
-:- discontiguous happensAt/3.
-:- dynamic happensAt/3.
 
 
 :- table(stratum/2).
@@ -85,7 +75,7 @@ holdsAtNoCache(Actor, exp(C,E,TriggerT,ProgressedExp, Status, Message), T) :-
     ( pragmatically_keep_exp(ResidualExp, SimplifiedExp)
     ; \+ member(SimplifiedExp, [true, false])
     ),
-    progress(SimplifiedExp, ProgressedExp,T),
+    progress(SimplifiedExp, ProgressedExp),
     (holdsAt(Actor, exp_rule(C,E,Status,Message),T) ; Status = independent).
 
 
@@ -176,7 +166,7 @@ holdsAtPrevLabel(Actor, F, L, T) :-
 
 % TO DO: Add support below for 'or' and for additional temporal operators
 
-
+% Support for nonground expectations
 eval(Actor, ExistsExpr, T, Boolean):-
     ExistsExpr = exist(_, _),
     !,
@@ -187,7 +177,8 @@ eval(Actor, ExistsExpr, T, Boolean):-
 eval(Actor, F, T, Boolean) :-
     functor(F, Func, Arity),
     \+ member(Func/Arity, [true/0, false/0, not/1, and/1, or/1, condition/1, self/1, (@)/1, happ/1, next/1, within/2, within/3, later/2, delay/2, before/2, preceded/2, eventually/1, always/1, never/1, until/2, '@prev'/2]),
-    ( setof(F, holdsAtCached(Actor, F, T), GroundFs) ->
+    % This condition used holdsAtCached/3 but this didn't work for derived fluents. I haven't implemented full testing for the use of holdsAt/3 instead.
+    ( setof(F, holdsAt(Actor, F, T), GroundFs) ->
         Boolean = true,
         member(F, GroundFs)
     ; Boolean = false
@@ -238,7 +229,7 @@ eval(Actor, happ(Event), T, Boolean) :-
 eval(_, next(F), _, next(F)).
 
 eval(Actor, preceded(F,P),T,F2):- S is T - P, (S < 0 -> false ; (holdsAt(Actor, F,S)-> F2 = true ; F2 = false)).
-
+% Support for checking if fluent F is true within P time periods.
 eval(Actor, within(F,P),T,F2):-
     (eval(Actor, F,T,true) ->
         F2 = true
@@ -251,12 +242,14 @@ eval(Actor, within(F,P,Type),T,F2):-
     ; P < 0 -> F2 = false;
     F2 = within(F,P,Type)).
 
+% Support for checking if fluent F is not true within P time periods
 eval(Actor, later(Actor, F,P),T,F2):-
     (eval(Actor, F,T,true) ->
         F2 = false
     ; P < 0 -> F2 = true;
     F2 = later(F,P)).
 
+% Support for checking if fluent F is true in precisely P time periods
 eval(Actor, delay(F,P), T, F2):-
     (eval(Actor, F,T,true) ->
     (P = 0 ->
@@ -282,24 +275,25 @@ eval(Actor, never(F), T, F2) :-
         F2 = false
     ; F2 = never(F)
     ).
+
+% Support for checking if F1 is true until F2 is true
 eval(Actor, until(F1, F2), T, F) :-
     ( eval(Actor, F2, T, true) -> F = true
     ; eval(Actor, F1, T, false) -> F = false
     ; F = until(F1, F2)
     ).
 
+% Support for checking if F1 is true before F2 is true
 eval(Actor, before(Actor, F1,F2), T, F):-
     (eval(Actor, F2,T,true) -> F = false;
      eval(Actor, F1,T, true) -> F = true;
      F = before(F1,F2)).
 
 
-
-
 map_eval(_, [], _, []).
 map_eval(Actor, [H|T], Time, [HResult|TResult]) :-
     eval(Actor, H, Time, HResult),
-    map_eval(Actor, T, Time, TResult).
+    map_eval(Actor, T, Time, TResult), !.
 
 
 reduce_and([], [], true) :- !.
@@ -313,6 +307,7 @@ reduce_and([Term|Tail], Unknowns, Result) :-
     append(Unknowns, [Term], Unknowns2),
     reduce_and(Tail, Unknowns2, Result).
 
+% Support for or() evaluation
 reduce_or([],[],false):- !.
 reduce_or([], Unknowns, or(Unknowns)).
 reduce_or([false|Tail], Unknowns, Result):-
@@ -325,17 +320,17 @@ reduce_or([Term|Tail], Unknowns, Result):-
 
 % Progression (note: partial evaluation/simplication has already been done)
 
-progress(true, true,_).
-progress(false, false,_).
-progress(next(LTLFormula), LTLFormula,_).
+progress(true, true).
+progress(false, false).
+progress(next(LTLFormula), LTLFormula).
 
-progress(within(F1,T1), within(F1,T2),_):- T2 is T1 - 1.
+progress(within(F1,T1), within(F1,T2)):- T2 is T1 - 1.
 
-progress(later(F1,T1), later(F1,T2),_):- T2 is T1 - 1.
-progress(delay(F1,T1), delay(F1,T2),_):- T2 is T1 - 1.
-progress(before(F1,F2), before(F1,F2),_).
-progress(eventually(LTLFormula), eventually(LTLFormula),_).
-progress(never(LTLFormula), never(LTLFormula),_).
+progress(later(F1,T1), later(F1,T2)):- T2 is T1 - 1.
+progress(delay(F1,T1), delay(F1,T2)):- T2 is T1 - 1.
+progress(before(F1,F2), before(F1,F2)).
+progress(eventually(LTLFormula), eventually(LTLFormula)).
+progress(never(LTLFormula), never(LTLFormula)).
 
 possibly_unknown_not(F, not(F)) :-
     \+ member(F, [true,false]).
