@@ -16,7 +16,7 @@ Organ transplant modelling using expectation event calculus
 
 # Event Calculus capabilities and suitability
 
-We can use event calculus to model events and expectations in product tracking and veracity scenarios. This demonstration makes use of 
+We can use event calculus (EC) to model events and expectations in product tracking and veracity scenarios. This demonstration makes use of discrete event calculus (we have discrete periods of time) to exhibit some helpful capabilities of EC in an organ donation scenario.
 
 ## Issues with current set up
 - We can't evaluate multiple expectations of the same type which occur for the same actor at the same time - we will only get output for one of the expectations.
