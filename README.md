@@ -9,6 +9,14 @@ Organ transplant modelling using expectation event calculus
 
 ## Deepnote setup
 - The [Dockerfile](Dockerfile) used to set up the Deepnote environment.
-- For the Jswipl kernel, see [jupyter-swi-prolog](jupyter-swi-prolog). This kernel uses code from [Veracity Lab](https://github.com/veracitylab/jupyter-swi-prolog), but has additional support for saving prolog output and combining code from multiple cells into a single prolog file.
+- For the Jswipl kernel, see [jupyter-swi-prolog](jupyter-swi-prolog). This kernel uses code from [Veracity Lab](https://github.com/veracitylab/jupyter-swi-prolog), but has additional support for running Python cells, saving prolog output and combining code from multiple cells into a single prolog file.
 - The [installation notebook](init.ipynb).
+- The [requirements file](requirements.txt) which is used by the installation notebook.
 - For a guide on how to use the JSwipl kernel in Deepnote, see [using_jswipl.ipynb](using_jswipl.ipynb).
+
+# Event Calculus capabilities and suitability
+
+We can use event calculus to model events and expectations in product tracking and veracity scenarios. This demonstration makes use of 
+
+## Issues with current set up
+- We can't evaluate multiple expectations of the same type which occur for the same actor at the same time - we will only get output for one of the expectations.
