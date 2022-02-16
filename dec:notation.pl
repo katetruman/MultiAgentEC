@@ -15,6 +15,11 @@
 :- dynamic label/3.
 :- dynamic derived_fluent/1.
 
+% Asserting rules
+:- dynamic happensAt/3.
+:- dynamic holdsAt/3.
+:- multifile holdsAtNoCache/3.
+:- dynamic holdsAtNoCache/3.
 
 :- discontiguous initially/1.
 :- discontiguous initiates/3.
@@ -23,6 +28,10 @@
 :- discontiguous happensAtNarrative/2.
 :- discontiguous derived_fluent/1.
 
+% Hmmm, did not used to need happensAt here
+:- multifile happensAt/3.
+:- discontiguous happensAt/3.
+:- dynamic happensAt/3.
 
 :- table(stratum/2).
 stratum(1, cum_prop_delta(_,_,_)).
@@ -176,7 +185,7 @@ eval(Actor, ExistsExpr, T, Boolean):-
 
 eval(Actor, F, T, Boolean) :-
     functor(F, Func, Arity),
-    \+ member(Func/Arity, [true/0, false/0, not/1, and/1, or/1, condition/1, self/1, (@)/1, happ/1, next/1, within/2, within/3, later/2, delay/2, before/2, preceded/2, eventually/1, always/1, never/1, until/2, '@prev'/2]),
+    \+ member(Func/Arity, [true/0, false/0, not/1, and/1, or/1, condition/1, self/1, (@)/1, happ/1, next/1, within/2, within/3, withinStartNext/2, later/2, delay/2, before/2, preceded/2, eventually/1, always/1, never/1, until/2, '@prev'/2]),
     % This condition used holdsAtCached/3 but this didn't work for derived fluents. I haven't implemented full testing for the use of holdsAt/3 instead.
     ( setof(F, holdsAt(Actor, F, T), GroundFs) ->
         Boolean = true,
@@ -235,6 +244,9 @@ eval(Actor, within(F,P),T,F2):-
         F2 = true
     ; P < 0 -> F2 = false;
     F2 = within(F,P)).
+
+% Support for checking if fluent F is true within P time periods, discluding the current time period.
+eval(Actor, withinStartNext(F,P),T,withinStartNext(F,P)).
 
 eval(Actor, within(F,P,Type),T,F2):-
     (eval(Actor, F,T,true) ->
@@ -325,7 +337,7 @@ progress(false, false).
 progress(next(LTLFormula), LTLFormula).
 
 progress(within(F1,T1), within(F1,T2)):- T2 is T1 - 1.
-
+progress(withinStartNext(F1, T1), within(F1, T2)):- T2 is T1 - 1.
 progress(later(F1,T1), later(F1,T2)):- T2 is T1 - 1.
 progress(delay(F1,T1), delay(F1,T2)):- T2 is T1 - 1.
 progress(before(F1,F2), before(F1,F2)).
