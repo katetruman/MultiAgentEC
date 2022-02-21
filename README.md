@@ -1,5 +1,7 @@
 # MultiAgentEC
-Organ transplant modelling using expectation event calculus 
+### Organ transplant modelling using expectation event calculus 
+#### Kate Truman, University of Otago Computer Science 2021 / 2022 Summer Bursary
+
 
 ## Multi-agent files
 - [AgentsAndEvents.ipynb](AgentsAndEvents.ipynb) should be read first. It contains the agent and event declarations for the organ transplant scenario, and provides some context. The prolog code from this notebook has been automatically saved to [AE.pl](AE.pl) in Deepnote.
