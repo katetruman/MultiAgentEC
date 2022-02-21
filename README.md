@@ -4,6 +4,9 @@
 
 
 ## Multi-agent files
+You can launch this repository as a Deepnote project by clicking [here](https://deepnote.com/launch?url=https%3A%2F%2Fgithub.com%2Fkatetruman%2FMultiAgentEC).
+Note that while inidividual"View in Deepnote" buttons have been added to the notebooks listed below, the Deepnote Viewer appears to have problems displaying all of the notebooks in full.
+
 - [AgentsAndEvents.ipynb](AgentsAndEvents.ipynb) should be read first. It contains the agent and event declarations for the organ transplant scenario, and provides some context. The prolog code from this notebook has been automatically saved to [AE.pl](AE.pl) in Deepnote.
 - [Expectations.ipynb](Expectations.ipynb) provides an overview of the expectation rule examples covered.
 - Individual expectation examples can be found in the [ExpectationExamples](ExpectationExamples) folder.
