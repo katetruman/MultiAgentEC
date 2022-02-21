@@ -4,7 +4,7 @@
 
 ## Launching in Deepnote
 You can launch this repository as a Deepnote project by clicking [here](https://deepnote.com/launch?url=https%3A%2F%2Fgithub.com%2Fkatetruman%2FMultiAgentEC).
-Note that while individual "View in Deepnote" buttons have been added to the notebooks listed below, the Deepnote Viewer appears to have problems displaying all of the notebooks in full.
+Note that while individual "View in Deepnote" buttons have been added to the notebooks listed below, the Deepnote Viewer appears to have problems displaying all of the notebooks in full in this format.
 
 ## Multi-agent files
 
