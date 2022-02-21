@@ -18,5 +18,6 @@ Organ transplant modelling using expectation event calculus
 
 We can use event calculus (EC) to model events and expectations in product tracking and veracity scenarios. This demonstration makes use of discrete event calculus (we have discrete periods of time) to exhibit some helpful capabilities of EC in an organ donation scenario.
 
-## Issues with current set up
-- We can't evaluate multiple expectations of the same type which occur for the same actor at the same time - we will only get output for one of the expectations.
+## Notes about current set up
+- We can't evaluate multiple expectations of the same type which occur for the same actor at the same time - we will only get output for one of the expectations. This feature can potentially be turned off if necessary.
+- If we have an expectation that some condition will be true within X time periods, if it is true after X + 1 time periods, this registers as a fulfilment and not a violation. 

@@ -4,7 +4,7 @@
 :- multifile initiates/3.
 :- multifile terminates/3.
 :- multifile releases/4.
-:- multifile progress/2.
+:- multifile progress/4.
 :- multifile happensAtNarrative/2.
 :- multifile holdsAt/3.
 :- multifile derived_fluent/1.
@@ -16,10 +16,9 @@
 :- dynamic derived_fluent/1.
 
 % Asserting rules
-:- dynamic happensAt/3.
-:- dynamic holdsAt/3.
-:- multifile holdsAtNoCache/3.
-:- dynamic holdsAtNoCache/3.
+%:- dynamic holdsAt/3.
+%:- multifile holdsAtNoCache/3.
+%:- dynamic holdsAtNoCache/3.
 
 :- discontiguous initially/1.
 :- discontiguous initiates/3.
@@ -28,7 +27,7 @@
 :- discontiguous happensAtNarrative/2.
 :- discontiguous derived_fluent/1.
 
-% Hmmm, did not used to need happensAt here
+% Allows for state constraints for events
 :- multifile happensAt/3.
 :- discontiguous happensAt/3.
 :- dynamic happensAt/3.
@@ -84,7 +83,7 @@ holdsAtNoCache(Actor, exp(C,E,TriggerT,ProgressedExp, Status, Message), T) :-
     ( pragmatically_keep_exp(ResidualExp, SimplifiedExp)
     ; \+ member(SimplifiedExp, [true, false])
     ),
-    progress(SimplifiedExp, ProgressedExp),
+    progress(Actor, SimplifiedExp, ProgressedExp, PrevT),
     (holdsAt(Actor, exp_rule(C,E,Status,Message),T) ; Status = independent).
 
 
@@ -175,14 +174,6 @@ holdsAtPrevLabel(Actor, F, L, T) :-
 
 % TO DO: Add support below for 'or' and for additional temporal operators
 
-% Support for nonground expectations
-eval(Actor, ExistsExpr, T, Boolean):-
-    ExistsExpr = exist(_, _),
-    !,
-    varnumbers_names(ExistsExpr, exist(_,ExprCopy),_),
-    eval(Actor, ExprCopy, T, Boolean).
-
-
 eval(Actor, F, T, Boolean) :-
     functor(F, Func, Arity),
     \+ member(Func/Arity, [true/0, false/0, not/1, and/1, or/1, condition/1, self/1, (@)/1, happ/1, next/1, within/2, within/3, withinStartNext/2, later/2, delay/2, before/2, preceded/2, eventually/1, always/1, never/1, until/2, '@prev'/2]),
@@ -237,29 +228,51 @@ eval(Actor, happ(Event), T, Boolean) :-
 
 eval(_, next(F), _, next(F)).
 
-eval(Actor, preceded(F,P),T,F2):- S is T - P, (S < 0 -> false ; (holdsAt(Actor, F,S)-> F2 = true ; F2 = false)).
+eval(Actor, preceded(F,P),T,F2):- S is T - P, eval(Actor, F, S, F2).
+
 % Support for checking if fluent F is true within P time periods.
-eval(Actor, within(F,P),T,F2):-
-    (eval(Actor, F,T,true) ->
-        F2 = true
-    ; P < 0 -> F2 = false;
-    F2 = within(F,P)).
+eval(Actor, within(F, P), T, F2):-
+    (P < 0 -> 
+        F2 = false ;  
+        (P = 0 -> 
+            (eval(Actor, F, T, true) -> 
+                F2 = true ; 
+                F2 = false);
+            (eval(Actor, F, T, true) -> 
+                F2 = true ; 
+                F2 = within(F, P)))).
+
+
+% Support for adjustable expectations. Could be expanded to other clauses, which would be declared with a 
+% Type parameter, and then could declare rules converting clauses missing a type parameter to those with one.
+
+eval(Actor, within(F, P, Type), T, F2):-
+    (P < 0 -> 
+        F2 =false ;  
+        (P = 0 -> 
+            (eval(Actor, F, T, true) -> 
+                F2 = true ; 
+                F2 = false);
+            (eval(Actor, F, T, true) -> 
+                F2 = true ; 
+                F2 = within(F, P, Type)))).
 
 % Support for checking if fluent F is true within P time periods, discluding the current time period.
-eval(Actor, withinStartNext(F,P),T,withinStartNext(F,P)).
+eval(_, withinStartNext(F,P), _, withinStartNext(F,P)).
 
-eval(Actor, within(F,P,Type),T,F2):-
-    (eval(Actor, F,T,true) ->
-        F2 = true
-    ; P < 0 -> F2 = false;
-    F2 = within(F,P,Type)).
 
 % Support for checking if fluent F is not true within P time periods
-eval(Actor, later(Actor, F,P),T,F2):-
-    (eval(Actor, F,T,true) ->
-        F2 = false
-    ; P < 0 -> F2 = true;
-    F2 = later(F,P)).
+eval(Actor, later(F,P), T, F2):-
+    (P < 0 -> 
+        F2 = true;
+        (P = 0 -> 
+            (eval(Actor, F, T, true) -> 
+                F2 = false ; 
+                F2 = true);
+            (eval(Actor, F, T, true) ->
+                F2 = false;
+                F2 = later(F,P)))).
+
 
 % Support for checking if fluent F is true in precisely P time periods
 eval(Actor, delay(F,P), T, F2):-
@@ -296,7 +309,7 @@ eval(Actor, until(F1, F2), T, F) :-
     ).
 
 % Support for checking if F1 is true before F2 is true
-eval(Actor, before(Actor, F1,F2), T, F):-
+eval(Actor, before(F1,F2), T, F):-
     (eval(Actor, F2,T,true) -> F = false;
      eval(Actor, F1,T, true) -> F = true;
      F = before(F1,F2)).
@@ -332,17 +345,17 @@ reduce_or([Term|Tail], Unknowns, Result):-
 
 % Progression (note: partial evaluation/simplication has already been done)
 
-progress(true, true).
-progress(false, false).
-progress(next(LTLFormula), LTLFormula).
+progress(_, true, true, _).
+progress(_, false, false, _).
+progress(_, next(LTLFormula), LTLFormula, _).
 
-progress(within(F1,T1), within(F1,T2)):- T2 is T1 - 1.
-progress(withinStartNext(F1, T1), within(F1, T2)):- T2 is T1 - 1.
-progress(later(F1,T1), later(F1,T2)):- T2 is T1 - 1.
-progress(delay(F1,T1), delay(F1,T2)):- T2 is T1 - 1.
-progress(before(F1,F2), before(F1,F2)).
-progress(eventually(LTLFormula), eventually(LTLFormula)).
-progress(never(LTLFormula), never(LTLFormula)).
+progress(_, within(F1,T1), within(F1,T2), _):- T2 is T1 - 1.
+progress(_, withinStartNext(F1, T1), within(F1, T2), _):- T2 is T1 - 1.
+progress(_, later(F1,T1), later(F1,T2), _):- T2 is T1 - 1.
+progress(_, delay(F1,T1), delay(F1,T2), _):- T2 is T1 - 1.
+progress(_, before(F1,F2), before(F1,F2), _).
+progress(_, eventually(LTLFormula), eventually(LTLFormula), _).
+progress(_, never(LTLFormula), never(LTLFormula), _).
 
 possibly_unknown_not(F, not(F)) :-
     \+ member(F, [true,false]).
