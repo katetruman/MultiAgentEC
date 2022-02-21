@@ -2,6 +2,14 @@
 ### Organ transplant modelling using expectation event calculus 
 #### Kate Truman, University of Otago Computer Science 2021 / 2022 Summer Bursary
 
+
+We can use event calculus (EC) to model events and expectations in product tracking and veracity scenarios. This demonstration makes use of discrete event calculus (we have discrete periods of time) to exhibit some helpful capabilities of EC in an organ donation scenario.
+
+See [Report.md](Report.md) for a summary of the Bursary project.
+
+## Notes about current set up
+- We can't evaluate multiple expectations of the same type which occur for the same actor at the same time - we will only get output for one of the expectations. This feature can potentially be turned off if necessary.
+
 ## Launching in Deepnote
 You can launch this repository as a Deepnote project by clicking [here](https://deepnote.com/launch?url=https%3A%2F%2Fgithub.com%2Fkatetruman%2FMultiAgentEC). 
 If you wish to run any of the notebooks, you will need to set the environment to the local Dockerfile, build the Dockerfile and run the initialization notebook (init.ipynb). 
@@ -25,9 +33,4 @@ Note that while individual "View in Deepnote" buttons have been added to the not
 - The [requirements file](requirements.txt) which is used by the installation notebook.
 - For a guide on how to use the JSwipl kernel in Deepnote, see [using_jswipl.ipynb](using_jswipl.ipynb).
 
-# Event Calculus capabilities and suitability
 
-We can use event calculus (EC) to model events and expectations in product tracking and veracity scenarios. This demonstration makes use of discrete event calculus (we have discrete periods of time) to exhibit some helpful capabilities of EC in an organ donation scenario.
-
-## Notes about current set up
-- We can't evaluate multiple expectations of the same type which occur for the same actor at the same time - we will only get output for one of the expectations. This feature can potentially be turned off if necessary.
