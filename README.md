@@ -6,6 +6,8 @@ Organ transplant modelling using expectation event calculus
 - [Expectations.ipynb](Expectations.ipynb) provides an overview of the expectation rule examples covered.
 - Individual expectation examples can be found in the [ExpectationExamples](ExpectationExamples) folder.
 - For the current clauses which support discrete event calculus with Agent:Event syntax, see [dec:notation.pl](dec:notation.pl).
+- [DEC_Changes.pl](DEC_Changes.pl) records the changes made to dec.pl during the 10 Week Bursary period.
+- [date_time.pl] contains code from the [Date time package](https://github.com/fnogatz/date_time) by Falco Nogatz as using pack_install was not possible in Deepnote. Some Date time predicates are used by a notebook in the ExpectationExamples](ExpectationExamples) folder.
 
 ## Deepnote setup
 - The [Dockerfile](Dockerfile) used to set up the Deepnote environment.
@@ -20,4 +22,3 @@ We can use event calculus (EC) to model events and expectations in product track
 
 ## Notes about current set up
 - We can't evaluate multiple expectations of the same type which occur for the same actor at the same time - we will only get output for one of the expectations. This feature can potentially be turned off if necessary.
-- If we have an expectation that some condition will be true within X time periods, if it is true after X + 1 time periods, this registers as a fulfilment and not a violation. 
