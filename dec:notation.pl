@@ -1,4 +1,6 @@
 % This version of dec.pl uses Agent:Event notation
+% HappensAt, holdsAt, holdsAtCached, releases, releasedAtCached, progress and label 
+% take an additional Actor argument as the first parameter.
 
 :- multifile initially/1.
 :- multifile initiates/3.
@@ -7,18 +9,21 @@
 :- multifile progress/4.
 :- multifile happensAtNarrative/2.
 :- multifile holdsAt/3.
+
+% We set the progress/4 fluent to be multifile so that we can set adjustable expectations
+:- multifile progress/4.
+
+% We can declare fluents to be derived e.g. derived_fluent(colour/1) from within
+% other files. This means that they can be successfully included in our strata
+% checks without having to be used in an initiates, initially or terminates clause.
 :- multifile derived_fluent/1.
+
 :- dynamic holdsAtCached/3.
 :- dynamic releasedAtCached/3.
 :- dynamic cached/2.
 :- dynamic happensAtNarrative/2.
 :- dynamic label/3.
 :- dynamic derived_fluent/1.
-
-% Asserting rules
-%:- dynamic holdsAt/3.
-%:- multifile holdsAtNoCache/3.
-%:- dynamic holdsAtNoCache/3.
 
 :- discontiguous initially/1.
 :- discontiguous initiates/3.
@@ -33,8 +38,8 @@
 :- dynamic happensAt/3.
 
 :- table(stratum/2).
-stratum(1, cum_prop_delta(_,_,_)).
-stratum(2, cum_prop(_,_,_)).
+stratum(1, cum_prop_delta(_, _, _)).
+stratum(2, cum_prop(_, _, _)).
 stratum(3, F) :-
     setof(Func/Arity,
           (Fluent,E,T,B)^(( clause(initially(_:Fluent), B)
@@ -49,12 +54,12 @@ stratum(3, F) :-
     union(FAList1, FAList2, FAList),
     member(Func/Arity, FAList),
     functor(F, Func, Arity). % Create template for F with new vars as arguments
-stratum(4, exp(_,_,_,_,_,_)).
-stratum(5, exp(_,_,_)).
+% Our expectation rules, and thus our expectations, have two more arguments than before; Status and Message
+stratum(4, exp(_, _, _, _, _, _)).
+stratum(5, exp(_, _, _)).
 
 % If adding more strata, update num_strata/1 below.
 num_strata(5).
-
 
 holdsAt(Actor, F,T) :-
     stratum(N, F),
@@ -70,22 +75,21 @@ holdsAt(Actor, F,T) :-
 % will be retained even if the triggering expectation rule is terminated. If the Status is entered as dependent (or another undefined entry),
 % the expectation will be terminated with the expectation rule.
 
-holdsAtNoCache(Actor, exp(E,Status, Message), T) :-
-    setof((Exp,S, M), exists(Cond,OrigExp,TriggerT)^holdsAtCached(Actor, exp(Cond,OrigExp,TriggerT,Exp,S, M), T), Exps),
-    member((E,Status, Message), Exps),
-    (holdsAt(Actor, exp_rule(_,E,Status,Message),T) ; Status = independent).
+holdsAtNoCache(Actor, exp(E, Status, Message), T) :-
+    setof((Exp, S, M), exists(Cond, OrigExp, TriggerT)^holdsAtCached(Actor, exp(Cond, OrigExp, TriggerT, Exp, S, M), T), Exps),
+    member((E, Status, Message), Exps),
+    (holdsAt(Actor, exp_rule(_, E, Status, Message),T) ; Status = independent).
 
-holdsAtNoCache(Actor, exp(C,E,TriggerT,ProgressedExp, Status, Message), T) :-
+holdsAtNoCache(Actor, exp(C, E, TriggerT, ProgressedExp, Status, Message), T) :-
     T > 0,
     PrevT is T-1,
-    holdsAtCached(Actor, exp(C,E,TriggerT,ResidualExp, Status, Message), PrevT),
+    holdsAtCached(Actor, exp(C, E, TriggerT, ResidualExp, Status, Message), PrevT),
     eval(Actor, ResidualExp, PrevT, SimplifiedExp),
-    ( pragmatically_keep_exp(ResidualExp, SimplifiedExp)
-    ; \+ member(SimplifiedExp, [true, false])
-    ),
-    progress(Actor, SimplifiedExp, ProgressedExp, PrevT),
-    (holdsAt(Actor, exp_rule(C,E,Status,Message),T) ; Status = independent).
-
+    ( pragmatically_keep_exp(ResidualExp, SimplifiedExp) ->
+          progress(Actor, ResidualExp, ProgressedExp, PrevT)
+    ; \+ member(SimplifiedExp, [true, false]),
+      progress(Actor, SimplifiedExp, ProgressedExp, PrevT)),
+    (holdsAt(Actor, exp_rule(C, E, Status, Message),T) ; Status = independent).
 
 holdsAtNoCache(Actor, F, 0) :-
     initially(Actor:F).
@@ -103,21 +107,21 @@ holdsAtNoCache(Actor, F, T2) :-
     happensAt(Actor, E, T1),
     initiates(Actor:E, F, T1).
 
-holdsAtNoCache(Actor, cum_prop(P,K,V), T) :-
+holdsAtNoCache(Actor, cum_prop(P, K, V), T) :-
     TPrev is T-1,
     holdsAtCached(Actor, cum_prop(P,K,U), TPrev),
-    findall(Delta, holdsAtCached(Actor, cum_prop_delta(P,K,Delta), T), Deltas),
+    findall(Delta, holdsAtCached(Actor, cum_prop_delta(P, K, Delta), T), Deltas),
     sum_list(Deltas, DeltasTotal),
     V is U + DeltasTotal.
 
 % If an exp_rule holds in state T, and its condition is true there, then
 % its expectation holds in state T.  Use T=-1 if rule holds initially
-holdsAtNoCache(Actor, exp(C,E,T,E,Status,Message), T) :-
+holdsAtNoCache(Actor, exp(C, E, T, E, Status, Message), T) :-
     T >= 0, % Special case: It-s OK to check T=-1 for exp_rule/4 facts.
-    holdsAtCached(Actor, exp_rule(C,E, Status, Message), T), % NOTE: Same T
+    holdsAtCached(Actor, exp_rule(C, E, Status, Message), T), % NOTE: Same T
     eval(Actor, C, T, true),
     PrevT is T-1,
-    \+ holdsAtCached(Actor, exp(C,E,_,E, Status, Message), PrevT). 
+    \+ holdsAtCached(Actor, exp(C, E, _, E, Status, Message), PrevT). 
     % Avoid proliferation of 'always' and 'never' exps from same rule triggering in multiple time steps.
 
 % pragmatically_keep_exp/2
@@ -125,20 +129,20 @@ holdsAtNoCache(Actor, exp(C,E,T,E,Status,Message), T) :-
 % Holds when exp should be retained to detect future fulfilments and violations
 % TO DO: Decide based on a canonical form of the formula (e.g. not(always(F)) --> never(F))
 
-pragmatically_keep_exp(always(_), false).
-pragmatically_keep_exp(never(_), true).
+pragmatically_keep_exp(always(_), true).
+pragmatically_keep_exp(never(_), false).
 
-happensAt(Actor, F,T) :- happensAtInferred(Actor, F,T); happensAtNarrative(Actor:F,T).
+happensAt(Actor, F,T) :- happensAtNarrative(Actor:F, T); happensAtInferred(Actor, F, T).
 
 % TO DO: replace with fulf and viol closure clauses - but I have forgotten what I meant by that!
 % Note: changed from having 1 timestep delay for fulf/viol to no delay
 
-happensAtInferred(Actor, fulf(C,E,TriggerT, ResidualExp, Status, Message), T) :-
-    holdsAtCached(Actor, exp(C,E,TriggerT,ResidualExp, Status, Message), T),
+happensAtInferred(Actor, fulf(C, E, TriggerT, ResidualExp, Status, Message), T) :-
+    holdsAtCached(Actor, exp(C, E, TriggerT, ResidualExp, Status, Message), T),
     eval(Actor, ResidualExp, T, true).
 
-happensAtInferred(Actor, viol(C,E,TriggerT,ResidualExp, Status, Message), T) :-
-    holdsAtCached(Actor, exp(C,E,TriggerT,ResidualExp, Status, Message), T),
+happensAtInferred(Actor, viol(C, E, TriggerT, ResidualExp, Status, Message), T) :-
+    holdsAtCached(Actor, exp(C, E, TriggerT, ResidualExp, Status, Message), T),
     eval(Actor, ResidualExp, T, false).
 
 
@@ -146,10 +150,10 @@ happensAtInferred(Actor, conflict(P),T):-
     holdsAt(Actor, exp(eventually(P),Status, Message),T), holdsAt(Actor, exp(never(P), Status, Message),T).
 
 % Expectations and cumulative property fluents are always released from inertia
-releasedAt(_, exp(_,_,_), _).
-releasedAt(_, exp(_,_,_,_,_,_), _).
-releasedAt(_, cum_prop(_,_,_), _).
-releasedAt(_, cum_prop_delta(_,_,_), _).
+releasedAt(_, exp(_, _, _), _).
+releasedAt(_, exp(_, _, _, _, _, _), _).
+releasedAt(_, cum_prop(_, _, _), _).
+releasedAt(_, cum_prop_delta(_, _, _), _).
 
 releasedAt(Actor, F, T) :-
     releasedAtCached(Actor, F, T).
@@ -172,20 +176,17 @@ terminates(Actor:E, F=_, T) :- initiates(Actor:E, F=_, T).
 holdsAtPrevLabel(Actor, F, L, T) :-
     eval(Actor, '@prev'(L,F), T, true).
 
-% TO DO: Add support below for 'or' and for additional temporal operators
 
 eval(Actor, F, T, Boolean) :-
     functor(F, Func, Arity),
-    \+ member(Func/Arity, [true/0, false/0, not/1, and/1, or/1, condition/1, self/1, (@)/1, happ/1, next/1, within/2, within/3, withinStartNext/2, later/2, delay/2, before/2, preceded/2, eventually/1, always/1, never/1, until/2, '@prev'/2]),
-    % This condition used holdsAtCached/3 but this didn't work for derived fluents. I haven't implemented full testing for the use of holdsAt/3 instead.
-    ( setof(F, holdsAt(Actor, F, T), GroundFs) ->
+    \+ member(Func/Arity, [true/0, false/0, not/1, and/1, or/1, condition/1, (@)/1, happ/1, next/1, within/2, within/3, withinStartNext/2, later/2, delay/2, before/2, preceded/2, eventually/1, always/1, never/1, until/2, '@prev'/2]),
+    ( setof(F, holdsAtCached(Actor, F, T), GroundFs) ->
         Boolean = true,
         member(F, GroundFs)
     ; Boolean = false
     ).
 
 
-eval(Hosp, self(Hosp), _, true).
 
 % Evaluate true / false condition
 eval(_, condition(X),_,Bool):- (X -> Bool = true ; Bool = false).
@@ -228,8 +229,8 @@ eval(Actor, happ(Event), T, Boolean) :-
 
 eval(_, next(F), _, next(F)).
 
+% Support for checking if fluent F held P time periods before the current time period.
 eval(Actor, preceded(F,P),T,F2):- S is T - P, eval(Actor, F, S, F2).
-
 % Support for checking if fluent F is true within P time periods.
 eval(Actor, within(F, P), T, F2):-
     (P < 0 -> 
@@ -272,7 +273,6 @@ eval(Actor, later(F,P), T, F2):-
             (eval(Actor, F, T, true) ->
                 F2 = false;
                 F2 = later(F,P)))).
-
 
 % Support for checking if fluent F is true in precisely P time periods
 eval(Actor, delay(F,P), T, F2):-
@@ -349,11 +349,11 @@ progress(_, true, true, _).
 progress(_, false, false, _).
 progress(_, next(LTLFormula), LTLFormula, _).
 
-progress(_, within(F1,T1), within(F1,T2), _):- T2 is T1 - 1.
+progress(_, within(F1, T1), within(F1, T2), _):- T2 is T1 - 1.
 progress(_, withinStartNext(F1, T1), within(F1, T2), _):- T2 is T1 - 1.
-progress(_, later(F1,T1), later(F1,T2), _):- T2 is T1 - 1.
-progress(_, delay(F1,T1), delay(F1,T2), _):- T2 is T1 - 1.
-progress(_, before(F1,F2), before(F1,F2), _).
+progress(_, later(F1, T1), later(F1, T2), _):- T2 is T1 - 1.
+progress(_, delay(F1, T1), delay(F1, T2), _):- T2 is T1 - 1.
+progress(_, before(F1, F2), before(F1, F2), _).
 progress(_, eventually(LTLFormula), eventually(LTLFormula), _).
 progress(_, never(LTLFormula), never(LTLFormula), _).
 
@@ -363,7 +363,7 @@ possibly_unknown_not(true, false).
 possibly_unknown_not(false, true).
 
 run(N) :-
-    forall(between(0,N,T), tick(T)).
+    forall(between(0, N, T), tick(T)).
     %retractall(holdsAtCached(_, _,_))
 
 % Must be called at all time steps from 0 onwards. Records fluents that hold at T, given fluents and events at T-1
@@ -373,12 +373,13 @@ tick(T) :-
     % retractall(holdsAtCached(_, _, Tm2)),
     % retractall(releasedAtCached(_, _, Tm2)),
     num_strata(NS),
-    forall((between(1,NS,N)
+    forall((between(1, NS, N)
         %, format("** Stratum ~w**~n", [N])
        ),
             ( forall((stratum(N, F), % format("* Fluent ~w~n", [F]),
-              holdsAt(Actor, F,T)),
+              holdsAt(Actor, F, T)),
                      %(write('Caching '), write(F), write(' at '), writeln(T),
+            % Check if fluent is already cached to avoid double ups
              (holdsAtCached(Actor, F,T) -> true ;
              assert(holdsAtCached(Actor, F,T))
              )
