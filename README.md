@@ -14,7 +14,7 @@ See [Report.md](FurtherDocumentation/Report.md) in the **FurtherDocumentation** 
 You can launch this repository as a Deepnote project by clicking [here](https://deepnote.com/launch?url=https%3A%2F%2Fgithub.com%2Fkatetruman%2FMultiAgentEC). 
 If you wish to run any of the notebooks, you will need to set the environment to the local Dockerfile, build the Dockerfile and run the initialization notebook (init.ipynb). You may need to recomment the initialisation notebook line `sed -i '/jedi/d;/jupyter/d;' ./requirements.txt`.
 
-It may take a few minutes for the environment and any notebooks you use to be set up.
+Note that I am currently experiencing very slow loading times for notebooks to be set up.
 
 Note that while individual "View in Deepnote" buttons have been added to the notebooks listed below, the Deepnote Viewer appears to have problems displaying all of the notebooks in full in this format.
 
