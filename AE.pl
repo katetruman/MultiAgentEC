@@ -33,6 +33,11 @@ holdsAt(monSys, matched(MatchID, _, _, RecipientHospital, RecipientID, Location,
 holdsAt(monSys, waiting(RecipientID, RecipientHospital, OldOrgans, Details, T1),T),
 subtract(OldOrgans, ReceiveOrgans, NewOrgans), NewOrgans \= [].
 
+% File: cell.pl
+terminates(monSys:receive(Hospital, waitUpdate(ID, _, _)), waiting(ID, Hospital, _, _, T1), T):- T1 < T.
+initiates(monSys:receive(Hospital, waitUpdate(ID, Organs, Details)),
+waiting(ID, Hospital, Organs, Details, T1), T):- holdsAt(monSys, waiting(ID, Hospital, _, _, T1),T).
+
 % File: donorOffered.pl
 initiates(monSys:receive(Hospital, donorOffer(PatID, Organs, Details)),
 donorOffered(Hospital, PatID, Organs, Details), _).
