@@ -25,12 +25,12 @@ T1 is T + 1.
 % File: waitListDeletions.pl
 terminates(monSys:receive(Hospital, waitDelReq(ID,_)), waiting(ID,Hospital,_,_,_),_).
 terminates(monSys:receive(Location, transplantOutcome(MatchID, success)),
-waiting(RecipientID, RecipientHospital,_,_,_), T):-
-holdsAt(monSys:matched(MatchID, _, _, RecipientHospital, RecipientID, Location, _, _), T).
+waiting(RecipientID, RecipientHospital, _, _, _), T):-
+holdsAt(monSys, matched(MatchID, _, _, RecipientHospital, RecipientID, Location, _, _), T).
 initiates(monSys:receive(Location, transplantOutcome(MatchID, success)), waiting(RecipientID,
-RecipientHospital,NewOrgans, _, T1), T):-
+RecipientHospital,NewOrgans, Details, T1), T):-
 holdsAt(monSys, matched(MatchID, _, _, RecipientHospital, RecipientID, Location, ReceiveOrgans, _), T),
-holdsAt(monSys, waiting(RecipientID, RecipientHospital, OldOrgans, _, T1),T),
+holdsAt(monSys, waiting(RecipientID, RecipientHospital, OldOrgans, Details, T1),T),
 subtract(OldOrgans, ReceiveOrgans, NewOrgans), NewOrgans \= [].
 
 % File: donorOffered.pl
