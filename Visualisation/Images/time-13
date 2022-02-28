@@ -1,0 +1,173 @@
+digraph {
+	graph [label="Example scenario. Time: 13"]
+	node [fontsize=13 shape=box style=filled]
+	edge [style=invis]
+	subgraph cluster_Otago {
+		node [color=black fillcolor="#EEEEEE" fixedsize=true height=2 style="solid, filled" width=4]
+		edge [style=invis]
+		color="#E8ECFB" label=Otago rankdir=LR shape=box style="rounded,filled"
+		subgraph cluster_Fulf {
+			color="#CCDDAA" label=Fulfilments penwidth=3 shape=box style="rounded, filled"
+			OtagoFulf [label="" shape=record]
+		}
+		subgraph cluster_Viol {
+			color="#FFCCCC" label=Violations penwidth=3 shape=box style="rounded, filled"
+			OtagoViol [label="" shape=record]
+		}
+		subgraph cluster_Rules {
+			color="#D9CCE3" label="Expectation rules" penwidth=3 shape=box style="rounded, filled"
+			OtagoRules [label="{<f0>Individual - Patients will not have to wait \lmore than 25 time periods for a transplant.\l}" shape=record]
+		}
+		subgraph cluster_Other {
+			color="#D9CCE3" label="Other Events" penwidth=3 shape=box style="rounded, filled"
+			OtagoOther [label="" shape=record]
+		}
+		subgraph cluster_Sent {
+			color="#D9CCE3" label=Sent penwidth=3 shape=box style="rounded, filled"
+			OtagoSent [label="" shape=record]
+		}
+		subgraph cluster_Received {
+			color="#D9CCE3" label=Received penwidth=3 shape=box style="rounded, filled"
+			OtagoReceived [label="" shape=record]
+		}
+		OtagoReceived -> OtagoSent
+		OtagoFulf -> OtagoViol
+		OtagoOther -> OtagoRules
+	}
+	subgraph cluster_Christchurch {
+		node [color=black fillcolor="#EEEEEE" fixedsize=true height=2 style="solid, filled" width=4]
+		edge [style=invis]
+		color="#E8ECFB" label=Christchurch rankdir=LR shape=box style="rounded,filled"
+		subgraph cluster_Fulf {
+			color="#CCDDAA" label=Fulfilments penwidth=3 shape=box style="rounded, filled"
+			ChristchurchFulf [label="" shape=record]
+		}
+		subgraph cluster_Viol {
+			color="#FFCCCC" label=Violations penwidth=3 shape=box style="rounded, filled"
+			ChristchurchViol [label="" shape=record]
+		}
+		subgraph cluster_Rules {
+			color="#D9CCE3" label="Expectation rules" penwidth=3 shape=box style="rounded, filled"
+			ChristchurchRules [label="" shape=record]
+		}
+		subgraph cluster_Other {
+			color="#D9CCE3" label="Other Events" penwidth=3 shape=box style="rounded, filled"
+			ChristchurchOther [label="" shape=record]
+		}
+		subgraph cluster_Sent {
+			color="#D9CCE3" label=Sent penwidth=3 shape=box style="rounded, filled"
+			ChristchurchSent [label="" shape=record]
+		}
+		subgraph cluster_Received {
+			color="#D9CCE3" label=Received penwidth=3 shape=box style="rounded, filled"
+			ChristchurchReceived [label="" shape=record]
+		}
+		ChristchurchReceived -> ChristchurchSent
+		ChristchurchFulf -> ChristchurchViol
+		ChristchurchOther -> ChristchurchRules
+	}
+	subgraph cluster_Wellington {
+		node [color=black fillcolor="#EEEEEE" fixedsize=true height=2 style="solid, filled" width=4]
+		edge [style=invis]
+		color="#E8ECFB" label=Wellington rankdir=LR shape=box style="rounded,filled"
+		subgraph cluster_Fulf {
+			color="#CCDDAA" label=Fulfilments penwidth=3 shape=box style="rounded, filled"
+			WellingtonFulf [label="" shape=record]
+		}
+		subgraph cluster_Viol {
+			color="#FFCCCC" label=Violations penwidth=3 shape=box style="rounded, filled"
+			WellingtonViol [label="" shape=record]
+		}
+		subgraph cluster_Rules {
+			color="#D9CCE3" label="Expectation rules" penwidth=3 shape=box style="rounded, filled"
+			WellingtonRules [label="{<f0>Individual - Patients will not be added to \lthe waiting list for more than 2 organs at \lonce.\l}" shape=record]
+		}
+		subgraph cluster_Other {
+			color="#D9CCE3" label="Other Events" penwidth=3 shape=box style="rounded, filled"
+			WellingtonOther [label="" shape=record]
+		}
+		subgraph cluster_Sent {
+			color="#D9CCE3" label=Sent penwidth=3 shape=box style="rounded, filled"
+			WellingtonSent [label="" shape=record]
+		}
+		subgraph cluster_Received {
+			color="#D9CCE3" label=Received penwidth=3 shape=box style="rounded, filled"
+			WellingtonReceived [label="" shape=record]
+		}
+		WellingtonReceived -> WellingtonSent
+		WellingtonFulf -> WellingtonViol
+		WellingtonOther -> WellingtonRules
+	}
+	WellingtonSent -> OtagoReceived
+	subgraph cluster_Auckland {
+		node [color=black fillcolor="#EEEEEE" fixedsize=true height=2 style="solid, filled" width=4]
+		edge [style=invis]
+		color="#E8ECFB" label=Auckland rankdir=LR shape=box style="rounded,filled"
+		subgraph cluster_Fulf {
+			color="#CCDDAA" label=Fulfilments penwidth=3 shape=box style="rounded, filled"
+			AucklandFulf [label="" shape=record]
+		}
+		subgraph cluster_Viol {
+			color="#FFCCCC" label=Violations penwidth=3 shape=box style="rounded, filled"
+			AucklandViol [label="" shape=record]
+		}
+		subgraph cluster_Rules {
+			color="#D9CCE3" label="Expectation rules" penwidth=3 shape=box style="rounded, filled"
+			AucklandRules [label="{<f0>Individual - Donor offers will not be made \lfor patients diagnosed with cancer.\l}" shape=record]
+		}
+		subgraph cluster_Other {
+			color="#D9CCE3" label="Other Events" penwidth=3 shape=box style="rounded, filled"
+			AucklandOther [label="" shape=record]
+		}
+		subgraph cluster_Sent {
+			color="#D9CCE3" label=Sent penwidth=3 shape=box style="rounded, filled"
+			AucklandSent [label="" shape=record]
+		}
+		subgraph cluster_Received {
+			color="#D9CCE3" label=Received penwidth=3 shape=box style="rounded, filled"
+			AucklandReceived [label="" shape=record]
+		}
+		AucklandReceived -> AucklandSent
+		AucklandFulf -> AucklandViol
+		AucklandOther -> AucklandRules
+	}
+	AucklandSent -> ChristchurchReceived
+	subgraph cluster_monSys {
+		node [color=black fillcolor="#EEEEEE" fixedsize=true height=3 style="solid, filled" width=6]
+		edge [style=invis]
+		color="#E8ECFB" label=monSys rankdir=LR shape=box style="rounded,filled"
+		subgraph cluster_Fulf {
+			color="#CCDDAA" label=Fulfilments penwidth=3 shape=box style="rounded, filled"
+			monSysFulf [label="" shape=record]
+		}
+		subgraph cluster_Viol {
+			color="#FFCCCC" label=Violations penwidth=3 shape=box style="rounded, filled"
+			monSysViol [label="" shape=record]
+		}
+		subgraph cluster_Rules {
+			color="#D9CCE3" label="Expectation rules" penwidth=3 shape=box style="rounded, filled"
+			monSysRules [label="" shape=record]
+		}
+		subgraph cluster_Other {
+			color="#D9CCE3" label="Other Events" penwidth=3 shape=box style="rounded, filled"
+			monSysOther [label="{<f0>Match. Match ID: 701, donor hospital: Auckland, donor ID: 202, recipient \lhospital: Otago, recipient ID: 102, transplant location: Wellington, organs: \lkidney liver, details: \l}" shape=record]
+		}
+		subgraph cluster_Sent {
+			color="#D9CCE3" label=Sent penwidth=3 shape=box style="rounded, filled"
+			monSysSent [label="" shape=record]
+		}
+		subgraph cluster_Received {
+			color="#D9CCE3" label=Received penwidth=3 shape=box style="rounded, filled"
+			monSysReceived [label="" shape=record]
+		}
+		monSysReceived -> monSysSent
+		monSysFulf -> monSysViol
+		monSysOther -> monSysRules
+		subgraph cluster_Wait {
+			color="#D9CCE3" label="Wait List" penwidth=3 shape=box style="rounded, filled"
+			monSysWait [label="{<f0>Waiting. Patient ID: 101, hospital: Otago, organs: kidney liver, details: \lbloodType:O, start time: 2\l| <f1>Waiting. Patient ID: 102, hospital: Otago, organs: kidney heart liver, details: \lbloodType:A, start time: 4\l| <f2>Waiting. Patient ID: 103, hospital: Wellington, organs: heart pancreas, \ldetails: bloodType:B, start time: 6\l| <f3>Waiting. Patient ID: 104, hospital: Wellington, organs: heart pancreas lungs, \ldetails: bloodType:AB, start time: 8\l}" shape=record]
+		}
+	}
+	monSysSent -> AucklandReceived
+	monSysViol -> WellingtonReceived
+}
